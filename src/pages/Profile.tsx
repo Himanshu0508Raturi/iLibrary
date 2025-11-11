@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 
-const BASE_URL = 'ec2-98-84-15-104.compute-1.amazonaws.com:8080';
+const BASE_URL = 'http://ec2-98-84-15-104.compute-1.amazonaws.com:8080';
 
 interface Booking {
   id: number;

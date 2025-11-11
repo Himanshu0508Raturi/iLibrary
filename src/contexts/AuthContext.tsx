@@ -19,7 +19,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const BASE_URL = 'ec2-98-84-15-104.compute-1.amazonaws.com:8080';
+const BASE_URL = 'http://ec2-98-84-15-104.compute-1.amazonaws.com:8080';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 

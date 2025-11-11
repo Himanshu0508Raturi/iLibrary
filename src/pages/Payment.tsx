@@ -6,7 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { CreditCard, Loader2 } from 'lucide-react';
 
-const BASE_URL = 'ec2-98-84-15-104.compute-1.amazonaws.com:8080';
+const BASE_URL = 'http://ec2-98-84-15-104.compute-1.amazonaws.com:8080';
 
 const Payment = () => {
   const { token, isAuthenticated } = useAuth();
