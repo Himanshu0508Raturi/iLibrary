@@ -1,6 +1,5 @@
-import { set } from 'date-fns';
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface User {
   username: string;
@@ -19,89 +18,129 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const BASE_URL = '/api';
+const BASE_URL = "/api";
+
+/** Safely decode a JWT payload (handles url-safe base64) */
+function safeDecodeJwtPayload(token: string): any | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    let payload = parts[1];
+    // convert from base64url to base64
+    payload = payload.replace(/-/g, "+").replace(/_/g, "/");
+    // pad with '='
+    while (payload.length % 4) payload += "=";
+    const decoded = atob(payload);
+    return JSON.parse(decoded);
+  } catch (e) {
+    return null;
+  }
+}
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Load token and user from localStorage on mount
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    if (storedToken && storedUser) {
+    const storedToken = localStorage.getItem("token");
+    const storedUser = localStorage.getItem("user");
+
+    if (storedToken) {
       setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-      console.log(setUser);
+      if (storedUser) {
+        try {
+          setUser(JSON.parse(storedUser));
+        } catch {
+          // if storedUser is corrupted, try to decode from token
+          const payload = safeDecodeJwtPayload(storedToken);
+          if (payload) {
+            setUser({
+              username: payload.sub || "",
+              email: payload.email || "",
+              roles: Array.isArray(payload.roles) ? payload.roles : [],
+            });
+          } else {
+            setUser(null);
+          }
+        }
+      } else {
+        // derive user from token if possible
+        const payload = safeDecodeJwtPayload(storedToken);
+        if (payload) {
+          setUser({
+            username: payload.sub || "",
+            email: payload.email || "",
+            roles: Array.isArray(payload.roles) ? payload.roles : [],
+          });
+        }
+      }
     }
   }, []);
 
   const signup = async (username: string, password: string, email: string, roles: string[]) => {
-    // POST request to /public/signup endpoint
-    const response = await fetch(`${BASE_URL}/public/signup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password, email, roles }),
-    });
+    try {
+      const res = await fetch(`${BASE_URL}/public/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password, email, roles }),
+      });
 
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Signup failed');
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(body || `Signup failed (${res.status})`);
+      }
+    } catch (err: any) {
+      throw new Error(err?.message || "Signup failed");
     }
   };
 
   const login = async (username: string, password: string) => {
-    // POST request to /public/login endpoint
-    const response = await fetch(`${BASE_URL}/public/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Login failed');
-    }
-
-    // Get JSON response from login endpoint
-    const data = await response.json();
-    const jwtToken = data.token;
-    const roles = data.roles || [];
-
-    console.log('Login response:', data); // For debugging
-    console.log('Extracted token:', jwtToken);
-    console.log('Extracted roles:', roles);
-
-    // Decode JWT to get additional user info (optional, for username/email)
-    let payload: any = {};
     try {
-      payload = JSON.parse(atob(jwtToken.split('.')[1]));
-      console.log('JWT payload:', payload); // For debugging
-    } catch (error) {
-      console.warn('Failed to decode JWT payload:', error);
+      const res = await fetch(`${BASE_URL}/public/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(text || `Login failed (${res.status})`);
+      }
+
+      const data = await res.json().catch(() => ({}));
+      const jwtToken: unknown = data?.token ?? null;
+      const rolesFromResponse: string[] = Array.isArray(data?.roles) ? data.roles : [];
+
+      if (!jwtToken || typeof jwtToken !== "string") {
+        throw new Error("No token received from server");
+      }
+
+      // decode jwt payload safely (optional)
+      const payload = safeDecodeJwtPayload(jwtToken as string) || {};
+
+      const userData: User = {
+        username: payload.sub || username,
+        email: payload.email || "",
+        roles: rolesFromResponse.length ? rolesFromResponse : (Array.isArray(payload.roles) ? payload.roles : []),
+      };
+
+      setToken(jwtToken as string);
+      setUser(userData);
+
+      localStorage.setItem("token", jwtToken as string);
+      localStorage.setItem("user", JSON.stringify(userData));
+    } catch (err: any) {
+      throw new Error(err?.message || "Login failed");
     }
-
-    const userData: User = {
-      username: payload.sub || username,
-      email: payload.email || '',
-      roles: roles, // Use roles from JSON response
-    };
-
-    setToken(jwtToken);
-    setUser(userData);
-    
-    // Store in localStorage
-    localStorage.setItem('token', jwtToken);
-    localStorage.setItem('user', JSON.stringify(userData));
   };
 
   const logout = () => {
     setToken(null);
     setUser(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    navigate('/');
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/");
   };
 
   return (
@@ -122,8 +161,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
+  if (!context) throw new Error("useAuth must be used within AuthProvider");
   return context;
 };
