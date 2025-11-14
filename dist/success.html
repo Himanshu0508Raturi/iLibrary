@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Successful</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .fade-in {
+            opacity: 0;
+            animation: fadeIn 1s ease-in-out forwards;
+        }
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center fade-in">
+        <div class="mb-6">
+            <svg class="w-16 h-16 text-green-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Payment Successful!</h1>
+            <p class="text-gray-600">Thank you for your payment.</p>
+        </div>
+        <button onclick="goHome()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-300">
+            Back to Home
+        </button>
+    </div>
+
+    <script>
+        function goHome() {
+            window.location.href = '/';
+        }
+
+        // Add fade-in animation on load
+        document.addEventListener('DOMContentLoaded', function() {
+            const element = document.querySelector('.fade-in');
+            element.style.opacity = '0';
+            setTimeout(() => {
+                element.style.opacity = '1';
+            }, 100);
+        });
+    </script>
+</body>
+</html>
