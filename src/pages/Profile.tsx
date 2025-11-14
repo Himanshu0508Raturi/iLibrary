@@ -20,16 +20,24 @@ import { Badge } from '@/components/ui/badge';
 
 const BASE_URL = '/api';
 
+interface Seat {
+  id: number;
+  seatNumber: string;
+  location: string;
+  status: string;
+}
+
 interface Booking {
   id: number;
-  seat_id: number;
+  amount: number;
   bookingDate: string;
-  startTime: string;
   endTime: string;
-  status: string;
   hrs: number;
-  amt: number;
-  isPaymentDone: boolean;
+  isPaymentDone: number;
+  seat: Seat;
+  startTime: string;
+  status: string;
+  user: any; // Not used in display, but present in data
 }
 
 interface Subscription {
@@ -50,26 +58,24 @@ const Profile = () => {
   const [allSubscriptions, setAllSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Helper function to convert 24-hour time to 12-hour format with AM/PM
-  const formatTime = (timeString: string) => {
+  // Helper function to convert ISO datetime string to 12-hour time format with AM/PM
+  const formatTime = (dateTimeString: string) => {
     try {
-      // Handle different time formats: "HH:MM", "HH:MM:SS", or already formatted
-      const timeParts = timeString.split(':');
-      let hours = parseInt(timeParts[0]);
-      let minutes = parseInt(timeParts[1]);
-
-      // Validate hours and minutes
-      if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
-        console.warn('Invalid time format:', timeString);
-        return timeString; // Return original if invalid
+      const date = new Date(dateTimeString);
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid datetime format:', dateTimeString);
+        return dateTimeString; // Return original if invalid
       }
+
+      let hours = date.getHours();
+      let minutes = date.getMinutes();
 
       const period = hours >= 12 ? 'PM' : 'AM';
       const displayHours = hours % 12 || 12;
       return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
     } catch (error) {
-      console.error('Error formatting time:', timeString, error);
-      return timeString; // Return original on error
+      console.error('Error formatting time:', dateTimeString, error);
+      return dateTimeString; // Return original on error
     }
   };
 
@@ -88,6 +94,7 @@ const Profile = () => {
       if (response.ok) {
         const data = await response.json();
         setBookingHistory(data);
+        console.log(data);
       }
     } catch (error) {
       toast.error('Failed to fetch booking history');
@@ -278,7 +285,7 @@ const Profile = () => {
                         <div className="space-y-1">
                           <p className="font-semibold text-lg">Booking #{booking.id}</p>
                           <p className="text-sm text-muted-foreground">
-                            Seat ID: {booking.seat_id}
+                            Seat: {booking.seat.seatNumber}
                           </p>
                         </div>
                         <div className="text-right space-y-1">
@@ -309,7 +316,7 @@ const Profile = () => {
                         <div>
                           <p className="text-muted-foreground">Amount</p>
                           <p className="font-bold text-xl text-green-600">
-                            ₹{booking.amt ? booking.amt.toLocaleString() : 'N/A'}
+                            ₹{booking.amount ? booking.amount.toLocaleString() : 'N/A'}
                           </p>
                         </div>
                       </div>
